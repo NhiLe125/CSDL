@@ -1,0 +1,55 @@
+Product Catalog – Mô tả hệ thống
+--------------------------------
+
+1. Mục tiêu dự án
+   - Xây dựng mini e-commerce cho phép xem, tìm kiếm, lọc sản phẩm; quản lý giỏ hàng; checkout và quản trị qua dashboard.
+
+2. Kiến trúc tổng thể
+   - Backend: FastAPI, Motor (MongoDB), JWT cho auth, chia router theo chức năng (auth/products/categories/cart/orders/upload/health).
+   - Frontend: React + Vite, React Router, React Query, Tailwind CSS, Recharts (dashboard charts).
+   - Triển khai: Docker Compose gồm MongoDB, backend, frontend; upload lưu trên volume riêng.
+
+3. Luồng nghiệp vụ chính
+   - Người dùng (role `user`):
+       * Đăng ký/đăng nhập → JWT lưu tại frontend.
+       * Xem sản phẩm, tìm kiếm full-text, filter theo danh mục/giá/brand.
+       * Thêm vào giỏ (snapshot giá), cập nhật số lượng, remove.
+       * Checkout → tạo đơn hàng trong MongoDB, giỏ được clear.
+       * Xem lịch sử đơn hàng, trạng thái và ghi chú.
+   - Quản trị (`admin`):
+       * CRUD sản phẩm + danh mục.
+       * Tab Đơn hàng: xem tổng quan, biểu đồ doanh thu 7 ngày, top sản phẩm, lọc theo trạng thái/thời gian/từ khóa.
+       * Cập nhật trạng thái đơn (pending/processing/completed/cancelled) kèm ghi chú; xem chi tiết từng đơn.
+
+4. MongoDB được áp dụng
+   - Collections:
+       * `users`: thông tin tài khoản, hashed_password, role.
+       * `products`: slug, specs linh hoạt (dict), rating, images.
+       * `categories`: hỗ trợ parent.
+       * `carts`: items snapshot (product_id, quantity, price).
+       * `orders`: items, shipping info, total, status, status_notes.
+   - Index: text index trên `name/description/brand`, index `category`, `price`, `slug`, `user_id`, `status`, `created_at`.
+   - Aggregation:
+       * `/api/orders/metrics`: `$group` doanh thu theo ngày, `$unwind` top products.
+       * `/api/orders/summary`: đếm trạng thái + tổng doanh thu.
+
+5. Seed data & demo
+   - `backend/seed_data.py` tạo:
+       * 6 danh mục, ~50 sản phẩm, user admin/test.
+       * 8 đơn hàng mẫu (trạng thái khác nhau, trong 7 ngày gần nhất) để dashboard có dữ liệu.
+
+6. Bảo mật & phân quyền
+   - JWT với `get_current_user`/`get_current_admin_user`.
+   - Frontend `ProtectedRoute` hỗ trợ `adminOnly` hoặc `allowRoles`.
+   - Admin không thấy Cart/Orders của user; user không truy cập `/admin`.
+
+7. Chạy hệ thống
+   - Backend: `pip install -r requirements.txt`, tạo `.env`, `uvicorn app.main:app --reload`.
+   - Frontend: `npm install`, copy `.env` (VITE_API_URL), `npm run dev`.
+   - Docker: `docker-compose up -d` (Mongo + backend + frontend).
+
+8. Điểm nổi bật
+   - UI responsive, Tailwind; Recharts cho thống kê admin.
+   - API rõ ràng, có tài liệu OpenAPI tại `/docs`.
+   - Seed script cho phép demo nhanh, dữ liệu phong phú.
+
